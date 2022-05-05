@@ -1,0 +1,65 @@
+version: '3'
+services:
+  traefik:
+    build: traefik
+    image: traefik:v2.5
+    container_name: traefik
+    restart: unless-stopped
+    command: --api.insecure=true --providers.docker
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/repositories:/etc/apk/repositories
+      - ./traefik/acme.json:/app/acme.json
+      - /etc/resolv.conf:/etc/resolv.conf
+    networks:
+      - crypto
+
+  web:
+    image: shrek100500/chatbot_api:smirk
+    restart: always
+    container_name: web
+    environment:
+      DB_HOST: db
+      DB_USERNAME: crypto
+      DB_PASSWORD: crypto
+      DB_DATABASE: crypto
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-router.entrypoints=websecure"
+      - "traefik.http.routers.traefik-router.rule=Host(`spl-bck.ru`)"
+      - "traefik.http.routers.traefik-router.tls.certresolver=letsencrypt"
+    networks:
+      - crypto
+    depends_on:
+      - db
+      - traefik
+
+  db:
+    build: postgres
+    image: crypto/postgresql
+    container_name: db
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - "./volumes/pgdata:/var/lib/postgresql/data"
+      - "./volumes/data:/opt/data"
+    tmpfs:
+      - /run
+      - /tmp
+    ports:
+      - "5432:5432"
+    networks:
+      - crypto
+
+networks:
+  crypto:
+    external: true

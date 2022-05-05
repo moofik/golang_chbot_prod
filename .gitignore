@@ -1,0 +1,8 @@
+test.db
+.idea
+.env
+go.sum
+vendor
+docker/traefik/acme.json
+docker/volumes/data
+docker/volumes/pgdata
